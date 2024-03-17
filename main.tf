@@ -13,8 +13,8 @@ terraform {
 # set up aws account:
 provider "aws" {
   region     = "us-east-1"
-  access_key = "AKIASR4LUE3OHTDTBMTF"
-  secret_key = "pU+R/gRvES+o6PGdY7LnnRo2+r5LPCkPS+UEuhMU"
+  access_key = "redacted"
+  secret_key = "redacted"
 }
 
 # Create a resource
@@ -221,9 +221,3 @@ resource "aws_instance" "web-server-instance" {
     Application = "tf-tutorial"
   }
 }
-
-# I worked with Maarij on the same team during my time at Principal Financial, and he was a joy to work with. Maarij is very selfless when it comes to helping the team, knowing that in helping others, the team gets stronger as a whole. Maarij often goes out of his way to help the team learn and grow in whatever way is needed at the moment.
-# I also noticed immediately that Maarij is a very hard worker, always learning and helping others learn. With his technical soundness, it is obvious that he is not a complacent engineer, but is continually honing his skills and knowledge. We could rely on Maarij to handle those tasks that no one on the team knew how to tackle, and he would always find a way. 
-# With his hard work, he did not simply keep his findings to himself, but would then go back and teach our team in learning sessions. This included Principal specific tasks, and new technologies that he had learned during his personal time. Maarij was not afraid to assume that teacher role and help everyone on the team learn. After teaching, he would go back and document information so the team could refer back to it, and would encourage others to do the same.
-# Not only did his impact on our team
-# friendly
