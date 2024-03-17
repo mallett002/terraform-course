@@ -13,8 +13,8 @@ terraform {
 # set up aws account:
 provider "aws" {
   region     = "us-east-1"
-  access_key = "redacted"
-  secret_key = "redacted"
+  access_key = "AKIASR4LUE3OHTDTBMTF"
+  secret_key = "pU+R/gRvES+o6PGdY7LnnRo2+r5LPCkPS+UEuhMU"
 }
 
 # Create a resource
@@ -38,7 +38,7 @@ provider "aws" {
 # # Create vpc
 # resource "aws_vpc" "first-vpc" {
 #   cidr_block = "10.0.0.0/16"
- 
+
 #   tags = {
 #     Name = "prod"
 #   }
@@ -67,3 +67,163 @@ provider "aws" {
 # 7. Create network interface with ip in the subnet that was created in step 4
 # 8. Assign an elastic IP to network interface created in step 7
 # 9. Create ubuntu server and install/enable apache2
+
+# vpc
+resource "aws_vpc" "prod-vpc" {
+  cidr_block = "10.0.0.0/16"
+}
+
+# internet gateway
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.prod-vpc.id
+
+  tags = {
+    Application = "tf-tutorial"
+  }
+}
+
+# egress only internet gateway
+resource "aws_egress_only_internet_gateway" "egw" {
+  vpc_id = aws_vpc.prod-vpc.id
+
+  tags = {
+    Application = "tf-tutorial"
+  }
+}
+
+# Route table
+resource "aws_route_table" "prod-rt" {
+  vpc_id = aws_vpc.prod-vpc.id
+
+  # default route (all traffic)
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
+  }
+
+  # default route for ipv6
+  route {
+    ipv6_cidr_block        = "::/0"
+    egress_only_gateway_id = aws_egress_only_internet_gateway.egw.id
+  }
+
+  tags = {
+    Application = "tf-tutorial"
+  }
+}
+
+# subnet
+resource "aws_subnet" "web-server-subnet" {
+  vpc_id               = aws_vpc.prod-vpc.id
+  cidr_block           = "10.0.1.0/24"
+  availability_zone_id = "use1-az1"
+
+  tags = {
+    Application = "tf-tutorial"
+  }
+}
+
+# associate subnet with route table
+resource "aws_route_table_association" "a" {
+  subnet_id      = aws_subnet.web-server-subnet.id
+  route_table_id = aws_route_table.prod-rt.id
+}
+
+# security group with inbound http and ssh
+resource "aws_security_group" "server_sg" {
+  name        = "server_sg"
+  description = "Allow TLS inbound traffic and all outbound traffic"
+  vpc_id      = aws_vpc.prod-vpc.id
+
+  tags = {
+    Application = "tf-tutorial"
+  }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+# Network interface with private IP in the subnet
+resource "aws_network_interface" "web-server-nic" {
+  subnet_id       = aws_subnet.web-server-subnet.id
+  private_ips     = ["10.0.1.50"]
+  security_groups = [aws_security_group.server_sg.id]
+
+  tags = {
+    Application = "tf-tutorial"
+  }
+}
+
+# Assign an elastic IP to network interface
+resource "aws_eip" "server-eip" {
+  vpc                       = true
+  network_interface         = aws_network_interface.web-server-nic.id
+  associate_with_private_ip = "10.0.1.50"
+  depends_on                = [aws_internet_gateway.gw, aws_egress_only_internet_gateway.egw]
+  #   instance = aws_instance.web.id
+
+  tags = {
+    Application = "tf-tutorial"
+  }
+}
+
+# ubuntu server
+resource "aws_instance" "web-server-instance" {
+  ami               = "ami-080e1f13689e07408"
+  instance_type     = "t2.micro"
+  availability_zone = "us-east-1c"
+  key_name          = "tf-key-pair"
+
+  network_interface {
+    device_index = 0
+    network_interface_id = aws_network_interface.web-server-nic.id
+  }
+  
+#   user_data         = "apache-install.sh"
+  user_data = <<-EOF
+            #!/bin/bash
+            sudo apt update -y
+            sudo apt install apache2 -y
+            sudo systemctl start apache2
+            sudo bash -c 'echo your very first web server > /var/www/html/index.html'
+            EOF
+
+#   security_groups   = [aws_security_group.server_sg.id]
+#   subnet_id         = aws_subnet.web-server-subnet.id
+
+
+  tags = {
+    Application = "tf-tutorial"
+  }
+}
+
+# I worked with Maarij on the same team during my time at Principal Financial, and he was a joy to work with. Maarij is very selfless when it comes to helping the team, knowing that in helping others, the team gets stronger as a whole. Maarij often goes out of his way to help the team learn and grow in whatever way is needed at the moment.
+# I also noticed immediately that Maarij is a very hard worker, always learning and helping others learn. With his technical soundness, it is obvious that he is not a complacent engineer, but is continually honing his skills and knowledge. We could rely on Maarij to handle those tasks that no one on the team knew how to tackle, and he would always find a way. 
+# With his hard work, he did not simply keep his findings to himself, but would then go back and teach our team in learning sessions. This included Principal specific tasks, and new technologies that he had learned during his personal time. Maarij was not afraid to assume that teacher role and help everyone on the team learn. After teaching, he would go back and document information so the team could refer back to it, and would encourage others to do the same.
+# Not only did his impact on our team
+# friendly
