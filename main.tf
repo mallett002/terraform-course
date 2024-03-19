@@ -13,8 +13,8 @@ terraform {
 # set up aws account:
 provider "aws" {
   region     = "us-east-1"
-  access_key = "redacted"
-  secret_key = "redacted"
+  access_key = "REDACTED"
+  secret_key = "REDACTED"
 }
 
 # Create a resource
@@ -68,6 +68,12 @@ provider "aws" {
 # 8. Assign an elastic IP to network interface created in step 7
 # 9. Create ubuntu server and install/enable apache2
 
+variable "subnet_prefix" {
+  description = "cidr block for subnet"
+#   default     = ""
+#   type        = String # type constraints on variable (TF supports many types)
+}
+
 # vpc
 resource "aws_vpc" "prod-vpc" {
   cidr_block = "10.0.0.0/16"
@@ -115,7 +121,7 @@ resource "aws_route_table" "prod-rt" {
 # subnet
 resource "aws_subnet" "web-server-subnet" {
   vpc_id               = aws_vpc.prod-vpc.id
-  cidr_block           = "10.0.1.0/24"
+  cidr_block           = var.subnet_prefix
   availability_zone_id = "use1-az1"
 
   tags = {
@@ -192,6 +198,11 @@ resource "aws_eip" "server-eip" {
   }
 }
 
+# Output the public ip for the web server
+output "server_public_ip" {
+  value = aws_eip.server-eip.public_ip
+}
+
 # ubuntu server
 resource "aws_instance" "web-server-instance" {
   ami               = "ami-080e1f13689e07408"
@@ -200,11 +211,11 @@ resource "aws_instance" "web-server-instance" {
   key_name          = "tf-key-pair"
 
   network_interface {
-    device_index = 0
+    device_index         = 0
     network_interface_id = aws_network_interface.web-server-nic.id
   }
-  
-#   user_data         = "apache-install.sh"
+
+  #   user_data         = "apache-install.sh"
   user_data = <<-EOF
             #!/bin/bash
             sudo apt update -y
@@ -213,11 +224,19 @@ resource "aws_instance" "web-server-instance" {
             sudo bash -c 'echo your very first web server > /var/www/html/index.html'
             EOF
 
-#   security_groups   = [aws_security_group.server_sg.id]
-#   subnet_id         = aws_subnet.web-server-subnet.id
+  #   security_groups   = [aws_security_group.server_sg.id]
+  #   subnet_id         = aws_subnet.web-server-subnet.id
 
 
   tags = {
     Application = "tf-tutorial"
   }
+}
+
+output "server_private_ip" {
+  value = aws_instance.web-server-instance.private_ip
+}
+
+output "server_private_id" {
+  value = aws_instance.web-server-instance.id
 }
