@@ -70,8 +70,8 @@ provider "aws" {
 
 variable "subnet_prefix" {
   description = "cidr block for subnet"
-#   default     = ""
-#   type        = String # type constraints on variable (TF supports many types)
+  default     = "10.0.1.0/24"
+  #   type        = string # type constraints on variable (TF supports many types)
 }
 
 # vpc
@@ -121,11 +121,12 @@ resource "aws_route_table" "prod-rt" {
 # subnet
 resource "aws_subnet" "web-server-subnet" {
   vpc_id               = aws_vpc.prod-vpc.id
-  cidr_block           = var.subnet_prefix
+  cidr_block           = var.subnet_prefix[0].cidr_block
   availability_zone_id = "use1-az1"
 
   tags = {
     Application = "tf-tutorial"
+    Name        = var.subnet_prefix[0].name
   }
 }
 
